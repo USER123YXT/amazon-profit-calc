@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>亚马逊 FBA 利润计算器</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --line:#e5e9f0; --text:#1f2937;
+    --muted:#6b7280; --brand:#2563eb; --brand-soft:#eff4ff;
+    --green:#16a34a; --red:#dc2626; --amber:#d97706;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5; padding:24px;
+  }
+  h1{font-size:22px; margin:0 0 4px;}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
+  .grid{display:grid; grid-template-columns:380px 1fr; gap:20px; align-items:start;}
+  @media(max-width:880px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .card h2{font-size:15px; margin:0 0 14px; display:flex; align-items:center; gap:8px;}
+  .card h2 .bar{width:4px; height:16px; background:var(--brand); border-radius:2px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .field .hint{font-size:11px; color:#9ca3af; margin-top:2px;}
+  .row{display:flex; gap:8px;}
+  .row > div{flex:1;}
+  input{
+    width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px;
+    font-size:14px; background:#fff; color:var(--text);
+  }
+  input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft);}
+  .btn{
+    padding:8px 14px; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;
+  }
+  .btn-primary{background:var(--brand); color:#fff;}
+  .btn-ghost{background:#fff; color:var(--brand); border:1px solid var(--brand);}
+  .btn-sm{padding:5px 10px; font-size:12px;}
+  .actions{display:flex; gap:8px; margin-top:6px;}
+  .result-hero{
+    display:flex; gap:18px; flex-wrap:wrap; padding:16px; background:var(--brand-soft);
+    border-radius:10px; margin-bottom:16px;
+  }
+  .metric{flex:1; min-width:120px;}
+  .metric .k{font-size:12px; color:var(--muted);}
+  .metric .v{font-size:24px; font-weight:700;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:right;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{color:var(--muted); font-weight:600; background:#fafbfc;}
+  .chart-row{display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .chart-row .name{width:120px; color:var(--muted); flex-shrink:0;}
+  .chart-row .track{flex:1; background:#f0f2f5; border-radius:6px; height:18px; overflow:hidden;}
+  .chart-row .fill{height:100%; background:var(--brand); border-radius:6px;}
+  .chart-row .amt{width:90px; text-align:right; flex-shrink:0;}
+  .pill{display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;}
+  .pill.g{background:#dcfce7; color:var(--green);}
+  .pill.r{background:#fee2e2; color:var(--red);}
+  .note{font-size:11px; color:#9ca3af; margin-top:10px; line-height:1.6;}
+  .sec-title{font-size:13px; font-weight:600; margin:18px 0 8px; color:var(--text);}
+  .saved-tag{font-size:11px; color:var(--green); margin-left:8px;}
+</style>
+</head>
+<body>
+  <h1>亚马逊 FBA 利润计算器</h1>
+  <div class="sub">单位：售价/配送费用 USD，成本/汇率用 CNY。数据自动存本地浏览器，下次打开还在。
+    <span id="savedTag" class="saved-tag"></span>
+  </div>
+
+  <div class="grid">
+    <!-- 输入区 -->
+    <div class="card">
+      <h2><span class="bar"></span>成本与定价明细</h2>
+
+      <div class="field">
+        <label>售价 (USD)</label>
+        <input id="price" type="number" step="0.01" value="24.99">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>汇率 (CNY/USD)</label>
+          <input id="rate" type="number" step="0.01" value="7.2">
+        </div>
+        <div class="field">
+          <label>佣金比例 (%)</label>
+          <input id="commission" type="number" step="0.1" value="15">
+          <div class="hint">多数类目 8%–15%</div>
+        </div>
+      </div>
+
+      <div class="sec-title">单件成本 (CNY)</div>
+      <div class="field">
+        <label>产品采购成本</label>
+        <input id="cost" type="number" step="0.01" value="28">
+      </div>
+      <div class="field">
+        <label>头程运费 (单件分摊)</label>
+        <input id="freight" type="number" step="0.01" value="6">
+      </div>
+      <div class="field">
+        <label>其他成本 (包装/贴标/辅料)</label>
+        <input id="other" type="number" step="0.01" value="2">
+      </div>
+
+      <div class="sec-title">亚马逊费用</div>
+      <div class="field">
+        <label>FBA 配送费 (USD)</label>
+        <input id="fba" type="number" step="0.01" value="3.5">
+        <div class="hint">按尺寸/重量在卖家后台查询</div>
+      </div>
+      <div class="field">
+        <label>月度仓储费 (单件分摊, USD)</label>
+        <input id="storage" type="number" step="0.001" value="0.15">
+      </div>
+
+      <div class="sec-title">推广与促销</div>
+      <div class="row">
+        <div class="field">
+          <label>广告费占比 (%)</label>
+          <input id="adPct" type="number" step="0.1" value="12">
+        </div>
+        <div class="field">
+          <label>促销折扣占比 (%)</label>
+          <input id="promoPct" type="number" step="0.1" value="5">
+        </div>
+      </div>
+      <div class="field">
+        <label>促销活动费用 (USD/单)</label>
+        <input id="promoFee" type="number" step="0.01" value="0.6">
+        <div class="hint">Coupon 兑换费 / Deal 参与费等固定费用</div>
+      </div>
+
+      <div class="sec-title">退货损耗</div>
+      <div class="row">
+        <div class="field">
+          <label>退货率 (%)</label>
+          <input id="returnRate" type="number" step="0.1" value="5">
+        </div>
+        <div class="field">
+          <label>退货单均损耗 (CNY)</label>
+          <input id="returnLoss" type="number" step="0.01" value="30">
+          <div class="hint">通常≈采购+头程，按实际填</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" id="resetBtn">重置为默认</button>
+      </div>
+    </div>
+
+    <!-- 结果区 -->
+    <div>
+      <div class="card">
+        <h2><span class="bar"></span>核算结果</h2>
+        <div class="result-hero">
+          <div class="metric">
+            <div class="k">单件净利润 (CNY)</div>
+            <div class="v" id="netCNY">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">利润率</div>
+            <div class="v" id="margin">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">单件净利润 (USD)</div>
+            <div class="v" id="netUSD">—</div>
+          </div>
+        </div>
+
+        <div class="sec-title">成本结构占比</div>
+        <div id="chart"></div>
+
+        <div class="note" id="breakdownNote"></div>
+      </div>
+
+      <!-- 定价方案对比 -->
+      <div class="card" style="margin-top:20px;">
+        <h2><span class="bar"></span>多定价方案对比</h2>
+        <div class="note">输入 3 个候选售价，快速对比哪个最划算（成本不变）。</div>
+        <div class="row" style="margin-top:10px;">
+          <div class="field"><label>方案 A (USD)</label><input id="pa" type="number" step="0.01" value="19.99"></div>
+          <div class="field"><label>方案 B (USD)</label><input id="pb" type="number" step="0.01" value="24.99"></div>
+          <div class="field"><label>方案 C (USD)</label><input id="pc" type="number" step="0.01" value="29.99"></div>
+        </div>
+        <table id="compareTable">
+          <thead><tr><th>方案</th><th>售价</th><th>净利润(CNY)</th><th>利润率</th><th>评价</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- 保本价反算 -->
+      <div class="card" style="margin-top:20px;">
+        <h2><span class="bar"></span>保本价 / 目标利润反算</h2>
+        <div class="row">
+          <div class="field">
+            <label>目标利润率 (%)</label>
+            <input id="targetMargin" type="number" step="0.1" value="20">
+          </div>
+          <div class="field" style="display:flex; align-items:flex-end;">
+            <div class="metric" style="flex:1;">
+              <div class="k">需要的售价 (USD)</div>
+              <div class="v" id="reqPrice" style="font-size:20px;">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="note">基于当前成本项反推：要达到目标利润率，售价至少应定为多少。</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ids = ["price","rate","commission","cost","freight","other","fba","storage","adPct","promoPct","promoFee","returnRate","returnLoss","pa","pb","pc","targetMargin"];
+const DEFAULTS = {price:"24.99",rate:"7.2",commission:"15",cost:"28",freight:"6",other:"2",fba:"3.5",storage:"0.15",adPct:"12",promoPct:"5",promoFee:"0.6",returnRate:"5",returnLoss:"30",pa:"19.99",pb:"24.99",pc:"29.99",targetMargin:"20"};
+
+// 读取本地保存
+const saved = JSON.parse(localStorage.getItem("amz_profit") || "{}");
+ids.forEach(id=>{ if(saved[id]!==undefined) $(id).value = saved[id]; });
+
+function num(id){ return parseFloat($(id).value) || 0; }
+function fmt(n){ return n.toLocaleString("zh-CN",{minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// 计算单个售价的利润明细
+function calc(priceUSD){
+  const rate = num("rate");
+  const commission = num("commission")/100;
+  const cost = num("cost");
+  const freight = num("freight");
+  const other = num("other");
+  const fbaUSD = num("fba");
+  const storageUSD = num("storage");
+  const adPct = num("adPct")/100;
+  const promoPct = num("promoPct")/100;
+  const promoFeeUSD = num("promoFee");
+  const returnRate = num("returnRate")/100;
+  const returnLossUnit = num("returnLoss");
+
+  const revenueCNY = priceUSD * rate;                  // 收入
+  const commissionCNY = priceUSD * commission * rate;  // 佣金
+  const fbaCNY = fbaUSD * rate;                        // FBA 配送
+  const storageCNY = storageUSD * rate;                // 仓储
+  const adCNY = revenueCNY * adPct;                    // 广告
+  const promoCNY = revenueCNY * promoPct;              // 促销折扣(打折让利)
+  const promoFeeCNY = promoFeeUSD * rate;              // 促销活动费(Coupon/Deal 等固定费)
+  const returnLossCNY = returnRate * returnLossUnit;   // 退货损耗
+
+  const totalCost = cost + freight + other + commissionCNY + fbaCNY + storageCNY + adCNY + promoCNY + promoFeeCNY + returnLossCNY;
+  const netCNY = revenueCNY - totalCost;
+  const margin = revenueCNY ? netCNY / revenueCNY : 0;
+
+  return {
+    revenueCNY, cost, freight, other, commissionCNY, fbaCNY, storageCNY, adCNY, promoCNY, promoFeeCNY, returnLossCNY,
+    totalCost, netCNY, margin, netUSD: netCNY/rate
+  };
+}
+
+function renderChart(d){
+  const items = [
+    ["采购成本", d.cost], ["头程", d.freight], ["其他", d.other],
+    ["佣金", d.commissionCNY], ["FBA配送", d.fbaCNY], ["仓储", d.storageCNY],
+    ["广告", d.adCNY], ["促销折扣", d.promoCNY], ["促销费用", d.promoFeeCNY],
+    ["退货损耗", d.returnLossCNY], ["净利润", d.netCNY]
+  ].sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(...items.map(x=>x[1]), 1);
+  $("chart").innerHTML = items.map(([n,v])=>{
+    const pct = Math.max(0, v/max*100);
+    const color = n==="净利润" ? (v>=0 ? "var(--green)" : "var(--red)") : "var(--brand)";
+    return `<div class="chart-row">
+      <div class="name">${n}</div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="amt">¥${fmt(v)}</div>
+    </div>`;
+  }).join("");
+}
+
+function update(){
+  // 主计算
+  const d = calc(num("price"));
+  $("netCNY").textContent = "¥"+fmt(d.netCNY);
+  $("netCNY").className = "v " + (d.netCNY>=0?"pos":"neg");
+  $("margin").textContent = (d.margin*100).toFixed(1)+"%";
+  $("margin").className = "v " + (d.netCNY>=0?"pos":"neg");
+  $("netUSD").textContent = "$"+fmt(d.netUSD);
+  $("netUSD").className = "v " + (d.netCNY>=0?"pos":"neg");
+  renderChart(d);
+  $("breakdownNote").textContent =
+    `收入 ¥${fmt(d.revenueCNY)} － 总成本 ¥${fmt(d.totalCost)} ＝ 净利润 ¥${fmt(d.netCNY)}（约 $${fmt(d.netUSD)}）。`;
+
+  // 方案对比
+  const plans = [["A",num("pa")],["B",num("pb")],["C",num("pc")]].filter(p=>p[1]>0);
+  $("compareTable").querySelector("tbody").innerHTML = plans.map(([name,p])=>{
+    const r = calc(p);
+    const cls = r.netCNY>=0 ? "g":"r";
+    const tag = r.netCNY>=0 ? "盈利" : "亏损";
+    return `<tr>
+      <td>方案 ${name}</td>
+      <td>$${fmt(p)}</td>
+      <td class="${r.netCNY>=0?'pos':'neg'}">¥${fmt(r.netCNY)}</td>
+      <td class="${r.netCNY>=0?'pos':'neg'}">${(r.margin*100).toFixed(1)}%</td>
+      <td><span class="pill ${cls}">${tag}</span></td>
+    </tr>`;
+  }).join("");
+
+  // 保本/目标反算
+  // netCNY = revCNY*(1 - 佣金 - 广告 - 促销折扣) - fixed
+  // fixed = 采购+头程+其他 + (FBA+仓储+促销活动费)*汇率 + 退货损耗
+  // 目标: revCNY*(1 - c - ad - promo) - fixed = revCNY*tm
+  // => revCNY = fixed / (1 - c - ad - promo - tm)
+  const tm = num("targetMargin")/100;
+  const fixed = d.cost + d.freight + d.other + (num("fba")+num("storage")+num("promoFee"))*num("rate") + d.returnLossCNY;
+  const denom = 1 - num("commission")/100 - num("adPct")/100 - num("promoPct")/100 - tm;
+  if(denom>0){
+    const revCNY = fixed/denom;
+    const reqPrice = revCNY/num("rate");
+    $("reqPrice").textContent = "$"+fmt(reqPrice);
+    $("reqPrice").className = "v " + (reqPrice>0?"pos":"neg");
+  } else {
+    $("reqPrice").textContent = "不可行";
+    $("reqPrice").className = "v neg";
+  }
+
+  // 保存
+  const data = {};
+  ids.forEach(id=>data[id]=$(id).value);
+  localStorage.setItem("amz_profit", JSON.stringify(data));
+  $("savedTag").textContent = "✓ 已自动保存";
+}
+
+ids.forEach(id=> $(id).addEventListener("input", update));
+$("resetBtn").addEventListener("click", ()=>{
+  if(confirm("确定恢复为默认数值？")){
+    ids.forEach(id=> $(id).value = DEFAULTS[id]);
+    update();
+  }
+});
+
+update();
+</script>
+</body>
+</html>
